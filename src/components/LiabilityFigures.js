@@ -10,6 +10,7 @@ const LiabilityFigures = () => {
   const [totalData, setTotalData] = useState({});
   const [branchData, setBranchData] = useState([]);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [showMessage, setShowMessage] = useState(true) // State to control visibility of the message
 
   useEffect(() => {
     if (selectedDate) {
@@ -26,6 +27,7 @@ const LiabilityFigures = () => {
 
   const onDateChange = (date) => {
     setSelectedDate(date);
+    setShowMessage(false); // Hide the <p> tag after the button is clicked
   };
 
   const calculateSums = (data) => {
@@ -157,6 +159,7 @@ const LiabilityFigures = () => {
     XLSX.utils.book_append_sheet(wb, totalDataSheet, 'TotalData');
 
     XLSX.writeFile(wb, 'liability_data.xlsx');
+    
   };
 
   const columns = [
@@ -235,9 +238,12 @@ const LiabilityFigures = () => {
   return (
     <div>
       <DatePicker onChange={onDateChange} style={{ marginBottom: '20px' }} />
-      <Button type="primary" onClick={exportToExcel} style={{ marginTop: '20px' }}>
+      <Button type="primary" onClick={exportToExcel} style={{ marginTop: '20px', marginLeft: '30px'}}>
         Export to Excel
       </Button>
+
+            {/* Conditionally render the <p> tag based on the state */}
+            {showMessage && <h4 style={{textAlign: 'center'}}>Select a date to display report</h4> }
 
       {selectedDate && (
         <>
