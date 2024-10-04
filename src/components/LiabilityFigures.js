@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Table, Button } from 'antd';
+import { Table, Button, DatePicker } from 'antd';
 import * as XLSX from 'xlsx';
+import moment from 'moment';
 import jsonData from './dataCom';
 
 const LiabilityFigures = () => {
@@ -8,12 +9,24 @@ const LiabilityFigures = () => {
   const [summedData, setSummedData] = useState([]);
   const [totalData, setTotalData] = useState({});
   const [branchData, setBranchData] = useState([]);
+  const [selectedDate, setSelectedDate] = useState(null);
 
   useEffect(() => {
-    setData(jsonData);
-    calculateSums(jsonData);
-    generateBranchData(jsonData);
-  }, []);
+    if (selectedDate) {
+      const filteredData = filterDataByDate(selectedDate);
+      calculateSums(filteredData);
+      generateBranchData(filteredData);
+    }
+  }, [selectedDate]);
+
+  const filterDataByDate = (date) => {
+    const formattedSelectedDate = date.format("DD/MM/YYYY");
+    return jsonData.filter((row) => moment(row.Date, "DD/MM/YYYY").format("DD/MM/YYYY") === formattedSelectedDate);
+  };
+
+  const onDateChange = (date) => {
+    setSelectedDate(date);
+  };
 
   const calculateSums = (data) => {
     const summedRows = [];
@@ -100,7 +113,6 @@ const LiabilityFigures = () => {
   const generateBranchData = (data) => {
     const branchDataRows = [];
 
-    // Group data by branch code and caption
     const groupedData = data.reduce((acc, row) => {
       const key = `${row.BranchCode}-${row.Caption}`;
       if (!acc[key]) {
@@ -116,7 +128,7 @@ const LiabilityFigures = () => {
       }
       acc[key].ActualBalance += row.ActualBalance;
       acc[key].AverageBalance += row.AverageBalance;
-      acc[key].NumOfAccounts += 1; // Counting the number of accounts
+      acc[key].NumOfAccounts += 1;
       return acc;
     }, {});
 
@@ -133,8 +145,7 @@ const LiabilityFigures = () => {
     XLSX.utils.book_append_sheet(wb, ws, 'BranchData');
 
     const sumInfo = XLSX.utils.json_to_sheet(summedData);
-    // const newSumInfo = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, sumInfo,'Summed Product');
+    XLSX.utils.book_append_sheet(wb, sumInfo, 'Summed Product');
 
     const totalDataSheet = XLSX.utils.json_to_sheet([
       { Category: 'DEMAND DEPOSIT', Total: totalData.demand },
@@ -223,38 +234,41 @@ const LiabilityFigures = () => {
 
   return (
     <div>
-          <Button type="primary" onClick={exportToExcel} style={{ marginTop: '20px' }}>
+      <DatePicker onChange={onDateChange} style={{ marginBottom: '20px' }} />
+      <Button type="primary" onClick={exportToExcel} style={{ marginTop: '20px' }}>
         Export to Excel
       </Button>
-      
-      <h2>Summed Data Table</h2>
-      <Table
-        columns={columns}
-        dataSource={summedData}
-        rowKey={(record) => record.caption}
-      />
 
-      <h2>Total Data Table</h2>
-      <Table
-        columns={totalColumns}
-        dataSource={[
-          { category: 'DEMAND DEPOSIT', total: totalData.demand },
-          { category: 'DOMICILIARY DEPOSIT', total: totalData.dom },
-          { category: 'SAVINGS', total: totalData.savings },
-          { category: 'TERM DEPOSIT', total: totalData.term },
-          { category: 'TOTAL', total: totalData.total },
-        ]}
-        rowKey={(record) => record.category}
-      />
+      {selectedDate && (
+        <>
+          <h2>Summed Data Table</h2>
+          <Table
+            columns={columns}
+            dataSource={summedData}
+            rowKey={(record) => record.caption}
+          />
 
-      <h2>Branch Data Table</h2>
-      <Table
-        columns={branchColumns}
-        dataSource={branchData}
-        rowKey={(record) => `${record.BranchCode}-${record.Caption}`}
-      />
+          <h2>Total Data Table</h2>
+          <Table
+            columns={totalColumns}
+            dataSource={[
+              { category: 'DEMAND DEPOSIT', total: totalData.demand },
+              { category: 'DOMICILIARY DEPOSIT', total: totalData.dom },
+              { category: 'SAVINGS', total: totalData.savings },
+              { category: 'TERM DEPOSIT', total: totalData.term },
+              { category: 'TOTAL', total: totalData.total },
+            ]}
+            rowKey={(record) => record.category}
+          />
 
-
+          <h2>Branch Data Table</h2>
+          <Table
+            columns={branchColumns}
+            dataSource={branchData}
+            rowKey={(record) => `${record.BranchCode}-${record.Caption}`}
+          />
+        </>
+      )}
     </div>
   );
 };
